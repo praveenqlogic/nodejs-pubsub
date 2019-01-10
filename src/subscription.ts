@@ -24,8 +24,10 @@ const snakeCase = require('lodash.snakecase');
 import {IAM} from './iam';
 import {Snapshot} from './snapshot';
 import {Subscriber} from './subscriber';
-import {PubSub, Metadata} from '.';
 import extend = require('extend');
+import {PubSub, Metadata, SubscriptionCallOptions, RequestCallback, ExistsCallback, CreateSubscriptionCallback, GetCallOptions, PushConfig} from '.';
+import {google} from '../proto/pubsub';
+import {CallOptions} from 'google-gax';
 
 /**
  * @typedef {object} ExpirationPolicy
@@ -62,6 +64,23 @@ export interface Duration {
   seconds: number;
   nanos: number;
 }
+
+/**
+ * @callback CreateTopicCallback
+ * @param {?Error} err Request error, if any.
+ * @param {Snapshot} snapshot
+ * @param {object} apiResponse The full API response.
+ */
+export interface CreateSnapshotCallback {
+  (err?: Error|null, topic?: Snapshot|null, apiResponse?: object): void;
+}
+
+/**
+ * @typedef {array} CreateSnapshotResponse
+ * @property {Snapshot}.
+ * @property {object} 1 The full API response.
+ */
+export type CreateSnapshotResponse = [Snapshot, object];
 
 /**
  * @see https://cloud.google.com/pubsub/docs/reference/rest/v1/projects.subscriptions
@@ -211,8 +230,8 @@ export class Subscription extends Subscriber {
   create!: Function;
   iam: IAM;
   name: string;
-  metadata;
-  constructor(pubsub: PubSub, name: string, options) {
+  metadata: Metadata;
+  constructor(pubsub: PubSub, name: string, options: SubscriptionCallOptions) {
     options = options || {};
     super(options);
     if (pubsub.Promise) {
@@ -306,14 +325,23 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[1];
    * });
    */
-  createSnapshot(name, gaxOpts, callback) {
+  createSnapshot(name: string, callback?: CreateSnapshotCallback): void;
+  createSnapshot(name: string, gaxOpts?: CallOptions):
+      Promise<CreateSnapshotResponse>;
+  createSnapshot(
+      name: string, gaxOpts: CallOptions,
+      callback: CreateSnapshotCallback): void;
+  createSnapshot(
+      name: string, gaxOptsOrCallback?: CallOptions|CreateSnapshotCallback,
+      callback?: CreateSnapshotCallback): void|Promise<CreateSnapshotResponse> {
     if (!is.string(name)) {
       throw new Error('A name is required to create a snapshot.');
     }
-    if (is.fn(gaxOpts)) {
-      callback = gaxOpts;
-      gaxOpts = {};
-    }
+    const gaxOpts =
+        typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
+    callback =
+        typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
+
     const snapshot = this.snapshot(name);
     const reqOpts = {
       name: snapshot.name,
@@ -326,13 +354,13 @@ export class Subscription extends Subscriber {
           reqOpts,
           gaxOpts,
         },
-        (err, resp) => {
+        (err: Error, resp: Snapshot) => {
           if (err) {
-            callback(err, null, resp);
+            callback!(err, null, resp);
             return;
           }
           snapshot.metadata = resp;
-          callback(null, snapshot, resp);
+          callback!(null, snapshot, resp);
         });
   }
   /**
@@ -364,11 +392,19 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[0];
    * });
    */
-  delete(gaxOpts?, callback?) {
-    if (is.fn(gaxOpts)) {
-      callback = gaxOpts;
-      gaxOpts = {};
-    }
+  delete(callback: RequestCallback<google.protobuf.Empty>): void;
+  delete(gaxOpts?: CallOptions): Promise<google.protobuf.Empty>;
+  delete(
+      gaxOpts: CallOptions,
+      callback: RequestCallback<google.protobuf.Empty>): void;
+  delete(
+      gaxOptsOrCallback?: CallOptions|RequestCallback<google.protobuf.Empty>,
+      callback?: RequestCallback<google.protobuf.Empty>):
+      void|Promise<google.protobuf.Empty> {
+    const gaxOpts =
+        typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
+    callback =
+        typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
     callback = callback || util.noop;
     const reqOpts = {
       subscription: this.name,
@@ -380,12 +416,12 @@ export class Subscription extends Subscriber {
           reqOpts,
           gaxOpts,
         },
-        (err, resp) => {
+        (err: Error, resp: google.protobuf.Empty) => {
           if (!err) {
             this.removeAllListeners();
             this.close();
           }
-          callback(err, resp);
+          callback!(err, resp);
         });
   }
   /**
@@ -419,13 +455,19 @@ export class Subscription extends Subscriber {
    *   const exists = data[0];
    * });
    */
-  exists(callback) {
+  exists(callback: ExistsCallback) {
     this.getMetadata(err => {
       if (!err) {
         callback(null, true);
         return;
       }
-      if (err.code === 5) {
+      let code = 0;
+      if (err.hasOwnProperty('code')) {
+        code =
+            (Object.getOwnPropertyDescriptor(err, 'code') as PropertyDescriptor)
+                .value;
+      }
+      if (code === 5) {
         callback(null, false);
         return;
       }
@@ -472,20 +514,27 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[1];
    * });
    */
-  get(gaxOpts, callback) {
+  get(gaxOpts: CallOptions&GetCallOptions,
+      callback: CreateSubscriptionCallback) {
     if (is.fn(gaxOpts)) {
-      callback = gaxOpts;
+      callback = gaxOpts as CreateSubscriptionCallback;
       gaxOpts = {};
     }
     const autoCreate = !!gaxOpts.autoCreate && is.fn(this.create);
     delete gaxOpts.autoCreate;
     this.getMetadata(gaxOpts, (err, apiResponse) => {
       if (!err) {
-        callback(null, this, apiResponse);
+        callback(null, this, apiResponse!);
         return;
       }
-      if (err.code !== 5 || !autoCreate) {
-        callback(err, null, apiResponse);
+      let code = 0;
+      if (err.hasOwnProperty('code')) {
+        code =
+            (Object.getOwnPropertyDescriptor(err, 'code') as PropertyDescriptor)
+                .value;
+      }
+      if (code !== 5 || !autoCreate) {
+        callback(err, null, apiResponse!);
         return;
       }
       this.create(gaxOpts, callback);
@@ -528,9 +577,15 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[0];
    * });
    */
-  getMetadata(gaxOpts?, callback?) {
+  getMetadata(callback?: RequestCallback<Subscription>):
+      void|Promise<Subscription>;
+  getMetadata(gaxOpts: CallOptions, callback: RequestCallback<Subscription>):
+      void;
+  getMetadata(
+      gaxOpts?: CallOptions|RequestCallback<Subscription>,
+      callback?: RequestCallback<Subscription>): void|Promise<Subscription> {
     if (is.fn(gaxOpts)) {
-      callback = gaxOpts;
+      callback = gaxOpts as RequestCallback<Subscription>;
       gaxOpts = {};
     }
     const reqOpts = {
@@ -543,11 +598,11 @@ export class Subscription extends Subscriber {
           reqOpts,
           gaxOpts,
         },
-        (err, apiResponse) => {
+        (err: Error, apiResponse: Subscription) => {
           if (!err) {
             this.metadata = apiResponse;
           }
-          callback(err, apiResponse);
+          callback!(err, apiResponse);
         });
   }
   /**
@@ -598,9 +653,11 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[0];
    * });
    */
-  modifyPushConfig(config, gaxOpts, callback) {
+  modifyPushConfig(
+      config: PushConfig, gaxOpts: CallOptions,
+      callback: RequestCallback<google.protobuf.Empty>) {
     if (is.fn(gaxOpts)) {
-      callback = gaxOpts;
+      callback = gaxOpts as RequestCallback<google.protobuf.Empty>;
       gaxOpts = {};
     }
     const reqOpts = {
@@ -653,7 +710,9 @@ export class Subscription extends Subscriber {
    *
    * subscription.seek(date, callback);
    */
-  seek(snapshot, gaxOpts, callback) {
+  seek(
+      snapshot: string|Date, gaxOpts: CallOptions,
+      callback: google.pubsub.v1.ISeekResponse) {
     if (is.fn(gaxOpts)) {
       callback = gaxOpts;
       gaxOpts = {};
@@ -669,9 +728,10 @@ export class Subscription extends Subscriber {
     };
 
     if (is.string(snapshot)) {
-      reqOpts.snapshot = Snapshot.formatName_(this.pubsub.projectId, snapshot);
+      reqOpts.snapshot =
+          Snapshot.formatName_(this.pubsub.projectId, snapshot.toString());
     } else if (is.date(snapshot)) {
-      reqOpts.time = snapshot;
+      reqOpts.time = snapshot as Date;
     } else {
       throw new Error('Either a snapshot name or Date is needed to seek to.');
     }
@@ -720,9 +780,11 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[0];
    * });
    */
-  setMetadata(metadata, gaxOpts?, callback?) {
+  setMetadata(
+      metadata: Metadata, gaxOpts?: CallOptions,
+      callback?: RequestCallback<Subscription>) {
     if (is.fn(gaxOpts)) {
-      callback = gaxOpts;
+      callback = gaxOpts as RequestCallback<Subscription>;
       gaxOpts = {};
     }
     const subscription = Subscription.formatMetadata_(metadata);
