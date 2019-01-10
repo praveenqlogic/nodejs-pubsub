@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import {promisifyAll} from '@google-cloud/promisify';
+import { promisifyAll } from '@google-cloud/promisify';
 import * as is from 'is';
 
 import * as util from './util';
 
 const snakeCase = require('lodash.snakecase');
 
-import {IAM} from './iam';
-import {Snapshot} from './snapshot';
-import {Subscriber} from './subscriber';
+import { IAM } from './iam';
+import { Snapshot } from './snapshot';
+import { Subscriber } from './subscriber';
 import extend = require('extend');
-import {PubSub, Metadata, SubscriptionCallOptions, RequestCallback, ExistsCallback, CreateSubscriptionCallback, GetCallOptions, PushConfig} from '.';
-import {google} from '../proto/pubsub';
-import {CallOptions} from 'google-gax';
+import { PubSub, Metadata, SubscriptionCallOptions, RequestCallback, ExistsCallback, CreateSubscriptionCallback, GetCallOptions, PushConfig } from '.';
+import { google } from '../proto/pubsub';
+import { CallOptions } from 'google-gax';
 
 /**
  * @typedef {object} ExpirationPolicy
@@ -54,7 +54,7 @@ import {CallOptions} from 'google-gax';
  */
 export interface PushConfig {
   pushEndpoint: string;
-  attributes?: {[key: string]: string;};
+  attributes?: { [key: string]: string; };
 }
 
 /**
@@ -72,7 +72,7 @@ export interface Duration {
  * @param {object} apiResponse The full API response.
  */
 export interface CreateSnapshotCallback {
-  (err?: Error|null, topic?: Snapshot|null, apiResponse?: object): void;
+  (err?: Error | null, topic?: Snapshot | null, apiResponse?: object): void;
 }
 
 /**
@@ -91,8 +91,8 @@ export interface TSubscriptionMetadata {
   pushConfig?: PushConfig;
   ackDeadlineSeconds?: number;
   retainAckedMessages?: boolean;
-  labels?: {[key: string]: string;};
-  expirationPolicy?: {ttl: string;};
+  labels?: { [key: string]: string; };
+  expirationPolicy?: { ttl: string; };
 }
 
 export interface SubscriptionMetadataRaw extends TSubscriptionMetadata {
@@ -327,20 +327,20 @@ export class Subscription extends Subscriber {
    */
   createSnapshot(name: string, callback?: CreateSnapshotCallback): void;
   createSnapshot(name: string, gaxOpts?: CallOptions):
-      Promise<CreateSnapshotResponse>;
+    Promise<CreateSnapshotResponse>;
   createSnapshot(
-      name: string, gaxOpts: CallOptions,
-      callback: CreateSnapshotCallback): void;
+    name: string, gaxOpts: CallOptions,
+    callback: CreateSnapshotCallback): void;
   createSnapshot(
-      name: string, gaxOptsOrCallback?: CallOptions|CreateSnapshotCallback,
-      callback?: CreateSnapshotCallback): void|Promise<CreateSnapshotResponse> {
+    name: string, gaxOptsOrCallback?: CallOptions | CreateSnapshotCallback,
+    callback?: CreateSnapshotCallback): void | Promise<CreateSnapshotResponse> {
     if (!is.string(name)) {
       throw new Error('A name is required to create a snapshot.');
     }
     const gaxOpts =
-        typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
+      typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
     callback =
-        typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
+      typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
 
     const snapshot = this.snapshot(name);
     const reqOpts = {
@@ -348,20 +348,20 @@ export class Subscription extends Subscriber {
       subscription: this.name,
     };
     this.request(
-        {
-          client: 'SubscriberClient',
-          method: 'createSnapshot',
-          reqOpts,
-          gaxOpts,
-        },
-        (err: Error, resp: Snapshot) => {
-          if (err) {
-            callback!(err, null, resp);
-            return;
-          }
-          snapshot.metadata = resp;
-          callback!(null, snapshot, resp);
-        });
+      {
+        client: 'SubscriberClient',
+        method: 'createSnapshot',
+        reqOpts,
+        gaxOpts,
+      },
+      (err: Error, resp: Snapshot) => {
+        if (err) {
+          callback!(err, null, resp);
+          return;
+        }
+        snapshot.metadata = resp;
+        callback!(null, snapshot, resp);
+      });
   }
   /**
    * Delete the subscription. Pull requests from the current subscription will
@@ -395,34 +395,34 @@ export class Subscription extends Subscriber {
   delete(callback: RequestCallback<google.protobuf.Empty>): void;
   delete(gaxOpts?: CallOptions): Promise<google.protobuf.Empty>;
   delete(
-      gaxOpts: CallOptions,
-      callback: RequestCallback<google.protobuf.Empty>): void;
+    gaxOpts: CallOptions,
+    callback: RequestCallback<google.protobuf.Empty>): void;
   delete(
-      gaxOptsOrCallback?: CallOptions|RequestCallback<google.protobuf.Empty>,
-      callback?: RequestCallback<google.protobuf.Empty>):
-      void|Promise<google.protobuf.Empty> {
+    gaxOptsOrCallback?: CallOptions | RequestCallback<google.protobuf.Empty>,
+    callback?: RequestCallback<google.protobuf.Empty>):
+    void | Promise<google.protobuf.Empty> {
     const gaxOpts =
-        typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
+      typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
     callback =
-        typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
+      typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
     callback = callback || util.noop;
     const reqOpts = {
       subscription: this.name,
     };
     this.request(
-        {
-          client: 'SubscriberClient',
-          method: 'deleteSubscription',
-          reqOpts,
-          gaxOpts,
-        },
-        (err: Error, resp: google.protobuf.Empty) => {
-          if (!err) {
-            this.removeAllListeners();
-            this.close();
-          }
-          callback!(err, resp);
-        });
+      {
+        client: 'SubscriberClient',
+        method: 'deleteSubscription',
+        reqOpts,
+        gaxOpts,
+      },
+      (err: Error, resp: google.protobuf.Empty) => {
+        if (!err) {
+          this.removeAllListeners();
+          this.close();
+        }
+        callback!(err, resp);
+      });
   }
   /**
    * @typedef {array} SubscriptionExistsResponse
@@ -464,8 +464,8 @@ export class Subscription extends Subscriber {
       let code = 0;
       if (err.hasOwnProperty('code')) {
         code =
-            (Object.getOwnPropertyDescriptor(err, 'code') as PropertyDescriptor)
-                .value;
+          (Object.getOwnPropertyDescriptor(err, 'code') as PropertyDescriptor)
+            .value;
       }
       if (code === 5) {
         callback(null, false);
@@ -514,27 +514,30 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[1];
    * });
    */
-  get(gaxOpts: CallOptions&GetCallOptions,
-      callback: CreateSubscriptionCallback) {
-    if (is.fn(gaxOpts)) {
-      callback = gaxOpts as CreateSubscriptionCallback;
-      gaxOpts = {};
-    }
+  get(callback: CreateSubscriptionCallback): void;
+  get(gaxOpts?: CallOptions & GetCallOptions): Promise<Subscription>;
+  get(gaxOpts: CallOptions & GetCallOptions, callback: CreateSubscriptionCallback): void;
+  get(gaxOptsOrCallback?: CallOptions & GetCallOptions | CreateSubscriptionCallback,
+    callback?: CreateSubscriptionCallback):void | Promise<Subscription> {
+    const gaxOpts =
+      typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
+    callback =
+      typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
     const autoCreate = !!gaxOpts.autoCreate && is.fn(this.create);
     delete gaxOpts.autoCreate;
     this.getMetadata(gaxOpts, (err, apiResponse) => {
       if (!err) {
-        callback(null, this, apiResponse!);
+        callback!(null, this, apiResponse!);
         return;
       }
       let code = 0;
       if (err.hasOwnProperty('code')) {
         code =
-            (Object.getOwnPropertyDescriptor(err, 'code') as PropertyDescriptor)
-                .value;
+          (Object.getOwnPropertyDescriptor(err, 'code') as PropertyDescriptor)
+            .value;
       }
       if (code !== 5 || !autoCreate) {
-        callback(err, null, apiResponse!);
+        callback!(err, null, apiResponse!);
         return;
       }
       this.create(gaxOpts, callback);
@@ -578,12 +581,12 @@ export class Subscription extends Subscriber {
    * });
    */
   getMetadata(callback?: RequestCallback<Subscription>):
-      void|Promise<Subscription>;
+    void | Promise<Subscription>;
   getMetadata(gaxOpts: CallOptions, callback: RequestCallback<Subscription>):
-      void;
+    void;
   getMetadata(
-      gaxOpts?: CallOptions|RequestCallback<Subscription>,
-      callback?: RequestCallback<Subscription>): void|Promise<Subscription> {
+    gaxOpts?: CallOptions | RequestCallback<Subscription>,
+    callback?: RequestCallback<Subscription>): void | Promise<Subscription> {
     if (is.fn(gaxOpts)) {
       callback = gaxOpts as RequestCallback<Subscription>;
       gaxOpts = {};
@@ -592,18 +595,18 @@ export class Subscription extends Subscriber {
       subscription: this.name,
     };
     this.request(
-        {
-          client: 'SubscriberClient',
-          method: 'getSubscription',
-          reqOpts,
-          gaxOpts,
-        },
-        (err: Error, apiResponse: Subscription) => {
-          if (!err) {
-            this.metadata = apiResponse;
-          }
-          callback!(err, apiResponse);
-        });
+      {
+        client: 'SubscriberClient',
+        method: 'getSubscription',
+        reqOpts,
+        gaxOpts,
+      },
+      (err: Error, apiResponse: Subscription) => {
+        if (!err) {
+          this.metadata = apiResponse;
+        }
+        callback!(err, apiResponse);
+      });
   }
   /**
    * @typedef {array} ModifyPushConfigResponse
@@ -654,8 +657,8 @@ export class Subscription extends Subscriber {
    * });
    */
   modifyPushConfig(
-      config: PushConfig, gaxOpts: CallOptions,
-      callback: RequestCallback<google.protobuf.Empty>) {
+    config: PushConfig, gaxOpts: CallOptions,
+    callback: RequestCallback<google.protobuf.Empty>) {
     if (is.fn(gaxOpts)) {
       callback = gaxOpts as RequestCallback<google.protobuf.Empty>;
       gaxOpts = {};
@@ -665,13 +668,13 @@ export class Subscription extends Subscriber {
       pushConfig: config,
     };
     this.request(
-        {
-          client: 'SubscriberClient',
-          method: 'modifyPushConfig',
-          reqOpts,
-          gaxOpts,
-        },
-        callback);
+      {
+        client: 'SubscriberClient',
+        method: 'modifyPushConfig',
+        reqOpts,
+        gaxOpts,
+      },
+      callback);
   }
   /**
    * @typedef {array} SeekResponse
@@ -711,8 +714,8 @@ export class Subscription extends Subscriber {
    * subscription.seek(date, callback);
    */
   seek(
-      snapshot: string|Date, gaxOpts: CallOptions,
-      callback: google.pubsub.v1.ISeekResponse) {
+    snapshot: string | Date, gaxOpts: CallOptions,
+    callback: google.pubsub.v1.ISeekResponse) {
     if (is.fn(gaxOpts)) {
       callback = gaxOpts;
       gaxOpts = {};
@@ -729,20 +732,20 @@ export class Subscription extends Subscriber {
 
     if (is.string(snapshot)) {
       reqOpts.snapshot =
-          Snapshot.formatName_(this.pubsub.projectId, snapshot.toString());
+        Snapshot.formatName_(this.pubsub.projectId, snapshot.toString());
     } else if (is.date(snapshot)) {
       reqOpts.time = snapshot as Date;
     } else {
       throw new Error('Either a snapshot name or Date is needed to seek to.');
     }
     this.request(
-        {
-          client: 'SubscriberClient',
-          method: 'seek',
-          reqOpts,
-          gaxOpts,
-        },
-        callback);
+      {
+        client: 'SubscriberClient',
+        method: 'seek',
+        reqOpts,
+        gaxOpts,
+      },
+      callback);
   }
   /**
    * @typedef {array} SetSubscriptionMetadataResponse
@@ -781,8 +784,8 @@ export class Subscription extends Subscriber {
    * });
    */
   setMetadata(
-      metadata: Metadata, gaxOpts?: CallOptions,
-      callback?: RequestCallback<Subscription>) {
+    metadata: Metadata, gaxOpts?: CallOptions,
+    callback?: RequestCallback<Subscription>) {
     if (is.fn(gaxOpts)) {
       callback = gaxOpts as RequestCallback<Subscription>;
       gaxOpts = {};
@@ -797,13 +800,13 @@ export class Subscription extends Subscriber {
       },
     };
     this.request(
-        {
-          client: 'SubscriberClient',
-          method: 'updateSubscription',
-          reqOpts,
-          gaxOpts,
-        },
-        callback);
+      {
+        client: 'SubscriberClient',
+        method: 'updateSubscription',
+        reqOpts,
+        gaxOpts,
+      },
+      callback);
   }
   /**
    * Create a Snapshot object. See {@link Subscription#createSnapshot} to
