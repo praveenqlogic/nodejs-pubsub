@@ -66,6 +66,23 @@ export interface PublisherCallOptions {
 }
 
 /**
+ * @callback CreateTopicCallback
+ * @param {?Error} err Request error, if any.
+ * @param {Snapshot} snapshot
+ * @param {object} apiResponse The full API response.
+ */
+export interface CreateSnapshotCallback {
+  (err?: Error | null, topic?: Snapshot | null, apiResponse?: object): void;
+}
+
+/**
+ * @typedef {array} CreateSnapshotResponse
+ * @property {Snapshot}.
+ * @property {object} 1 The full API response.
+ */
+export type CreateSnapshotResponse = [Snapshot, object];
+
+/**
  * @type {string} - Project ID placeholder.
  * @private
  */

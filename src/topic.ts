@@ -17,7 +17,6 @@
 import { paginator } from '@google-cloud/paginator';
 import { promisifyAll } from '@google-cloud/promisify';
 import { CallOptions } from 'google-gax';
-import * as is from 'is';
 import { Readable } from 'stream';
 import { google } from '../proto/pubsub';
 import { CreateSubscriptionCallback, CreateSubscriptionOptions, CreateSubscriptionResponse, CreateTopicCallback, CreateTopicResponse, ExistsCallback, GetCallOptions, Metadata, PublisherCallOptions, PubSub, RequestCallback, SubscriptionCallOptions } from '.';
@@ -482,12 +481,12 @@ export class Topic {
    *   const subscriptions = data[0];
    * });
    */
-  getSubscriptions(callback?: RequestCallback<Subscription[]>): void;
+  getSubscriptions(callback: RequestCallback<Subscription[]>): void;
   getSubscriptions(
     options: SubscriptionCallOptions,
-    callback?: RequestCallback<Subscription[]>): void;
+    callback: RequestCallback<Subscription[]>): void;
   getSubscriptions(
-    options: SubscriptionCallOptions,
+    options?: SubscriptionCallOptions,
   ): Promise<Subscription[]>;
   getSubscriptions(
     optionsOrCallback?: SubscriptionCallOptions |
@@ -598,9 +597,7 @@ export class Topic {
    *   // message.attributes = Attributes of the message.
    *   // message.publishTime = Timestamp when Pub/Sub received the message.
    * });
-   */
-  subscription(name: string): Subscription;
-  subscription(name: string, options?: SubscriptionCallOptions): Subscription;
+   */  
   subscription(name: string, options?: SubscriptionCallOptions): Subscription {
     options = options || {};
     options.topic = this;

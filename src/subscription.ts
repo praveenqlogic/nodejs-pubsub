@@ -25,7 +25,7 @@ import { IAM } from './iam';
 import { Snapshot } from './snapshot';
 import { Subscriber } from './subscriber';
 import extend = require('extend');
-import { PubSub, Metadata, SubscriptionCallOptions, RequestCallback, ExistsCallback, CreateSubscriptionCallback, GetCallOptions, PushConfig } from '.';
+import { PubSub, Metadata, SubscriptionCallOptions, RequestCallback, ExistsCallback, CreateSubscriptionCallback, GetCallOptions, PushConfig,CreateSnapshotCallback,CreateSnapshotResponse } from '.';
 import { google } from '../proto/pubsub';
 import { CallOptions } from 'google-gax';
 
@@ -64,23 +64,6 @@ export interface Duration {
   seconds: number;
   nanos: number;
 }
-
-/**
- * @callback CreateTopicCallback
- * @param {?Error} err Request error, if any.
- * @param {Snapshot} snapshot
- * @param {object} apiResponse The full API response.
- */
-export interface CreateSnapshotCallback {
-  (err?: Error | null, topic?: Snapshot | null, apiResponse?: object): void;
-}
-
-/**
- * @typedef {array} CreateSnapshotResponse
- * @property {Snapshot}.
- * @property {object} 1 The full API response.
- */
-export type CreateSnapshotResponse = [Snapshot, object];
 
 /**
  * @see https://cloud.google.com/pubsub/docs/reference/rest/v1/projects.subscriptions
@@ -325,7 +308,7 @@ export class Subscription extends Subscriber {
    *   const apiResponse = data[1];
    * });
    */
-  createSnapshot(name: string, callback?: CreateSnapshotCallback): void;
+  createSnapshot(name: string, callback: CreateSnapshotCallback): void;
   createSnapshot(name: string, gaxOpts?: CallOptions):
     Promise<CreateSnapshotResponse>;
   createSnapshot(
@@ -585,12 +568,12 @@ export class Subscription extends Subscriber {
   getMetadata(gaxOpts: CallOptions, callback: RequestCallback<Subscription>):
     void;
   getMetadata(
-    gaxOpts?: CallOptions | RequestCallback<Subscription>,
+    gaxOptsOrCallback?: CallOptions | RequestCallback<Subscription>,
     callback?: RequestCallback<Subscription>): void | Promise<Subscription> {
-    if (is.fn(gaxOpts)) {
-      callback = gaxOpts as RequestCallback<Subscription>;
-      gaxOpts = {};
-    }
+      const gaxOpts =
+      typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
+    callback =
+      typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
     const reqOpts = {
       subscription: this.name,
     };
