@@ -520,13 +520,14 @@ describe('pubsub', () => {
 
       function publish(messageCount) {
         const data = Buffer.from('Hello, world!');
-        const promises: Array<Promise<string>> = [];
+        const promises: Array<Promise<{messageIds: string[]}>> = [];
 
         let id = 0;
 
         for (let i = 0; i < messageCount; i++) {
           const testid = String(++id);
           messages.add(testid);
+          const a = publisher.publish(data, {testid});
           promises.push(publisher.publish(data, {testid}));
         }
 

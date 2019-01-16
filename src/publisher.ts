@@ -21,6 +21,7 @@ const each = require('async-each');
 import * as extend from 'extend';
 import * as is from 'is';
 import {Topic} from './topic';
+import {Inventory, PublisherCallOptions, RequestCallback, Attributes} from '.';
 
 interface PublishApiResponse {
   messageIds: string[];
@@ -56,10 +57,10 @@ export class Publisher {
   // tslint:disable-next-line variable-name
   Promise?: PromiseConstructor;
   topic: Topic;
-  inventory_;
-  settings;
-  timeoutHandle_;
-  constructor(topic: Topic, options) {
+  inventory_: Inventory;
+  settings: PublisherCallOptions;
+  timeoutHandle_: NodeJS.Timer|null;
+  constructor(topic: Topic, options: PublisherCallOptions) {
     if (topic.Promise) {
       this.Promise = topic.Promise;
     }
@@ -91,7 +92,7 @@ export class Publisher {
     };
     this.settings = {
       batching: {
-        maxBytes: Math.min(options.batching.maxBytes, Math.pow(1024, 2) * 9),
+        maxBytes: Math.min(options.batching.maxBytes!, Math.pow(1024, 2) * 9),
         maxMessages: Math.min(options.batching.maxMessages, 1000),
         maxMilliseconds: options.batching.maxMilliseconds,
       },
@@ -153,17 +154,22 @@ export class Publisher {
    * //-
    * publisher.publish(data).then((messageId) => {});
    */
-  publish(data: Buffer, attributes?: object): Promise<string>;
-  publish(data: Buffer, callback: Function): void;
-  publish(data: Buffer, attributes: object, callback: Function): void;
-  publish(data: Buffer, attributes?, callback?): Promise<string>|void {
+  publish(data: Buffer, callback: RequestCallback<string>): void;
+  publish(data: Buffer, attributes?: Attributes): Promise<PublishApiResponse>;
+  publish(
+      data: Buffer, attributes: Attributes,
+      callback: RequestCallback<string>): void;
+  publish(
+      data: Buffer, attributesOrCallback?: Attributes|RequestCallback<string>,
+      callback?: RequestCallback<string>): void|Promise<PublishApiResponse> {
     if (!(data instanceof Buffer)) {
       throw new TypeError('Data must be in the form of a Buffer.');
     }
-    if (is.fn(attributes)) {
-      callback = attributes;
-      attributes = {};
-    }
+    const attributes =
+        typeof attributesOrCallback === 'object' ? attributesOrCallback : {};
+    callback = typeof attributesOrCallback === 'function' ?
+        attributesOrCallback :
+        callback;
     // Ensure the `attributes` object only has string values
     for (const key of Object.keys(attributes)) {
       const value = attributes[key];
@@ -177,22 +183,22 @@ export class Publisher {
     // if this message puts us over the maxBytes option, then let's ship
     // what we have and add it to the next batch
     if (this.inventory_.bytes > 0 &&
-        this.inventory_.bytes + data.length > opts.maxBytes) {
+        this.inventory_.bytes + data.length > opts.maxBytes!) {
       this.publish_();
     }
     // add it to the queue!
-    this.queue_(data, attributes, callback);
+    this.queue_(data, attributes, callback!);
     // next lets check if this message brings us to the message cap or if we
     // hit the max byte limit
-    const hasMaxMessages = this.inventory_.queued.length === opts.maxMessages;
-    if (this.inventory_.bytes >= opts.maxBytes || hasMaxMessages) {
+    const hasMaxMessages = this.inventory_.queued!.length === opts.maxMessages;
+    if (this.inventory_.bytes >= opts.maxBytes! || hasMaxMessages) {
       this.publish_();
       return;
     }
     // otherwise let's set a timeout to send the next batch
     if (!this.timeoutHandle_) {
       this.timeoutHandle_ =
-          setTimeout(this.publish_.bind(this), opts.maxMilliseconds);
+          setTimeout(this.publish_.bind(this), opts.maxMilliseconds!);
     }
   }
   /**
@@ -206,13 +212,13 @@ export class Publisher {
     this.inventory_.callbacks = [];
     this.inventory_.queued = [];
     this.inventory_.bytes = 0;
-    clearTimeout(this.timeoutHandle_);
+    clearTimeout(this.timeoutHandle_!);
     this.timeoutHandle_ = null;
     const reqOpts = {
       topic: this.topic.name,
       messages,
     };
-    this.topic.request(
+    this.topic.request<PublishApiResponse>(
         {
           client: 'PublisherClient',
           method: 'publish',
@@ -221,11 +227,14 @@ export class Publisher {
         },
         (err, resp) => {
           const messageIds = arrify(resp && resp.messageIds);
-          each(callbacks, (callback, next) => {
-            const messageId = messageIds[callbacks.indexOf(callback)];
-            callback(err, messageId);
-            next();
-          });
+          each(
+              callbacks,
+              (callback: RequestCallback<string>,
+               next: RequestCallback<string>) => {
+                const messageId = messageIds[callbacks!.indexOf(callback)];
+                callback(err, messageId);
+                next();
+              });
         });
   }
   /**
@@ -237,13 +246,17 @@ export class Publisher {
    * @param {object} attributes The message attributes.
    * @param {function} callback The callback function.
    */
-  queue_(data, attrs, callback) {
-    this.inventory_.queued.push({
+  queue_(data: Buffer, attrs: Attributes): Promise<string>;
+  queue_(data: Buffer, attrs: Attributes, callback: RequestCallback<string>):
+      void;
+  queue_(data: Buffer, attrs: Attributes, callback?: RequestCallback<string>):
+      void|Promise<string> {
+    this.inventory_.queued!.push({
       data,
       attributes: attrs,
     });
     this.inventory_.bytes += data.length;
-    this.inventory_.callbacks.push(callback);
+    this.inventory_.callbacks!.push(callback!);
   }
 }
 

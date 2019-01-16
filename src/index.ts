@@ -43,6 +43,11 @@ const opts = {} as gax.GrpcClientOptions;
 const {grpc} = new gax.GrpcClient(opts);
 
 
+export interface SnapshotParent extends PubSub {
+  createSnapshot?: Function;
+  seek?: Function;
+}
+
 export interface ExistsCallback {
   (err: Error|null, res?: boolean): void;
 }
@@ -56,23 +61,48 @@ export interface PushConfig {
   attibutes?: Map<string, string>;
 }
 
+export interface Inventory {
+  callbacks?: Array<RequestCallback<string>>;
+  queued?: Array<{}>;
+  bytes: number;
+  ack?: string[];
+  lease?: string[];
+  nack?: Array<[string, number]>;
+}
+
+export interface FlowControl {
+  maxBytes?: number;
+  maxMessages: number;
+  allowExcessMessages: boolean;
+}
+
+export interface Batching {
+  maxBytes?: number;
+  maxMessages: number;
+  maxMilliseconds?: number;
+}
+
+export interface PublisherCallOptions {
+  batching: Batching;
+  gaxOpts?: CallOptions;
+}
+
+export interface Attributes {
+  [key: string]: string;
+}
+
 
 export interface SubscriptionCallOptions {
-  flowControl?:
-      {maxBytes?: number, maxMessages?: number, allowExcessMessages: boolean;};
+  flowControl?: FlowControl;
   maxConnections?: number;
   topic?: Topic;
   ackDeadline?: number;
   autoPaginate?: boolean;
   gaxOpts?: CallOptions;
-  batching?:
-      {maxBytes?: number, maxMessages?: number, maxMilliseconds?: number};
+  batching?: Batching;
 }
 
-export interface PublisherCallOptions {
-  batching?:
-      {maxBytes?: number, maxMessages?: number, maxMilliseconds?: number};
-}
+
 
 /**
  * @callback CreateTopicCallback

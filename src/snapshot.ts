@@ -15,9 +15,12 @@
  */
 
 import {promisifyAll} from '@google-cloud/promisify';
+import {Metadata} from 'grpc';
 import * as is from 'is';
 
-import {PubSub} from '.';
+import {google} from '../proto/pubsub';
+
+import {RequestCallback, SnapshotParent} from '.';
 import * as util from './util';
 
 /**
@@ -85,14 +88,14 @@ import * as util from './util';
  * });
  */
 export class Snapshot {
-  parent;
+  parent: SnapshotParent;
   name: string;
   // tslint:disable-next-line variable-name
   Promise?: PromiseConstructor;
-  create;
-  seek;
-  metadata;
-  constructor(parent, name: string) {
+  create!: Function;
+  seek!: Function;
+  metadata!: Metadata;
+  constructor(parent: SnapshotParent, name: string) {
     if (parent.Promise) {
       this.Promise = parent.Promise;
     }
@@ -134,7 +137,7 @@ export class Snapshot {
        *   const apiResponse = data[1];
        * });
        */
-      this.create = parent.createSnapshot.bind(parent, name);
+      this.create = parent.createSnapshot!.bind(parent, name);
     }
     if (is.fn(parent.seek)) {
       /**
@@ -162,7 +165,7 @@ export class Snapshot {
        *   const apiResponse = data[0];
        * });
        */
-      this.seek = parent.seek.bind(parent, name);
+      this.seek = parent.seek!.bind(parent, name);
     }
   }
 
@@ -185,7 +188,10 @@ export class Snapshot {
    *   const apiResponse = data[0];
    * });
    */
-  delete(callback) {
+  delete(): Promise<google.protobuf.Empty>;
+  delete(callback: RequestCallback<google.protobuf.Empty>): void;
+  delete(callback?: RequestCallback<google.protobuf.Empty>):
+      void|Promise<google.protobuf.Empty> {
     const reqOpts = {
       snapshot: this.name,
     };
