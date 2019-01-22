@@ -21,16 +21,14 @@ import * as extend from 'extend';
 import {CallOptions} from 'google-gax';
 import * as is from 'is';
 import * as snakeCase from 'lodash.snakecase';
-
 import {google} from '../proto/pubsub';
-
 import {CreateSnapshotCallback, CreateSnapshotResponse, CreateSubscriptionCallback, CreateSubscriptionResponse, ExistsCallback, GetCallOptions, Metadata, PubSub, PushConfig, RequestCallback, SubscriptionCallOptions} from '.';
-
 import {IAM} from './iam';
 import {Snapshot} from './snapshot';
 import {Subscriber, SubscriberOptions} from './subscriber';
-import {Topic} from './topic';
 import {noop} from './util';
+
+
 /**
  * @typedef {object} ExpirationPolicy
  * A policy that specifies the conditions for this subscription's expiration. A
@@ -409,6 +407,8 @@ export class Subscription extends EventEmitter {
    *   const apiResponse = data[0];
    * });
    */
+
+
   delete(callback: RequestCallback<google.protobuf.Empty>): void;
   delete(gaxOpts?: CallOptions): Promise<google.protobuf.Empty>;
   delete(
