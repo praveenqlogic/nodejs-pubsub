@@ -206,6 +206,8 @@ export class Subscription extends EventEmitter {
   constructor(pubsub: PubSub, name: string, options?: SubscriptionCallOptions) {
     super();
 
+
+
     options = options || {};
 
     this.pubsub = pubsub;
@@ -294,7 +296,6 @@ export class Subscription extends EventEmitter {
    * // If the callback is omitted a Promise will be returned.
    * subscription.close().then(() => {});
    */
-
   close(): Promise<void>;
   close(callback: RequestCallback<void>): void;
   close(callback?: RequestCallback<void>): void|Promise<void> {
@@ -425,8 +426,6 @@ export class Subscription extends EventEmitter {
         typeof gaxOptsOrCallback === 'object' ? gaxOptsOrCallback : {};
     callback =
         typeof gaxOptsOrCallback === 'function' ? gaxOptsOrCallback : callback;
-
-
     callback = callback || noop;
     const reqOpts = {
       subscription: this.name,
@@ -794,9 +793,6 @@ export class Subscription extends EventEmitter {
 
     if (typeof snapshot === 'string') {
       reqOpts.snapshot = Snapshot.formatName_(this.pubsub.projectId, snapshot);
-
-
-
     } else if (is.date(snapshot)) {
       reqOpts.time = snapshot as Date;
     } else {

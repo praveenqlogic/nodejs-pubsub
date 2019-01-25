@@ -45,11 +45,6 @@ const opts = {} as gax.GrpcClientOptions;
 const {grpc} = new gax.GrpcClient(opts);
 
 
-export interface SnapshotParent extends PubSub {
-  createSnapshot?: Function;
-  seek?: Function;
-}
-
 export interface GetSubscriptionMetadataCallback {
   (err: ServiceError|null, res?: google.pubsub.v1.Subscription|null): void;
 }
