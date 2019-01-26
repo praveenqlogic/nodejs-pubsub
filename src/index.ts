@@ -819,6 +819,8 @@ export class PubSub {
           return;
         }
         this.projectId = projectId!;
+        this.options.projectId = projectId!;
+
         this.getClient_(config, callback);
       });
       return;
