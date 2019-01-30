@@ -17,7 +17,7 @@
 import {promisifyAll} from '@google-cloud/promisify';
 import * as arrify from 'arrify';
 import {CallOptions} from 'google-gax';
-import {ServiceError} from 'grpc';
+import {google} from '../proto/pubsub';
 
 const each = require('async-each');
 import * as extend from 'extend';
@@ -26,11 +26,7 @@ import {Topic} from './topic';
 import {Inventory, RequestCallback, Attributes} from '.';
 
 export interface PublishCallback {
-  (err: null|ServiceError, messageId: string): void;
-}
-
-interface PublishApiResponse {
-  messageIds: string[];
+  (err?: null|Error, messageId?: string|null): void;
 }
 
 /**
@@ -162,8 +158,9 @@ export class Publisher {
   publish(data: Buffer, callback: PublishCallback): void;
   publish(data: Buffer, attributes: Attributes, callback: PublishCallback):
       void;
-  publish(data: Buffer, attributesOrCallback?, callback?): Promise<string>|
-      void {
+  publish(
+      data: Buffer, attributesOrCallback?: Attributes|PublishCallback,
+      callback?: PublishCallback): Promise<string>|void {
     if (!(data instanceof Buffer)) {
       throw new TypeError('Data must be in the form of a Buffer.');
     }
@@ -251,7 +248,7 @@ export class Publisher {
       topic: this.topic.name,
       messages,
     };
-    this.topic.request<PublishApiResponse>(
+    this.topic.request<google.pubsub.v1.PublishResponse>(
         {
           client: 'PublisherClient',
           method: 'publish',

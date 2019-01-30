@@ -39,6 +39,7 @@ import {CallOptions} from 'google-gax';
 import {Readable} from 'stream';
 import {google} from '../proto/pubsub';
 import {ServiceError} from 'grpc';
+import {FlowControlOptions} from './lease-manager';
 
 const opts = {} as gax.GrpcClientOptions;
 const {grpc} = new gax.GrpcClient(opts);
@@ -61,24 +62,11 @@ export interface GetCallOptions extends CallOptions {
   autoCreate?: boolean;
 }
 
-export interface PushConfig {
-  pushEndpoint: string;
-  attibutes?: Map<string, string>;
-}
-
 export interface Inventory {
   callbacks?: Array<RequestCallback<string>>;
   queued?: Array<{}>;
   bytes: number;
-  ack?: string[];
-  lease?: string[];
   nack?: Array<[string, number]>;
-}
-
-export interface FlowControl {
-  maxBytes?: number;
-  maxMessages: number;
-  allowExcessMessages: boolean;
 }
 
 export interface Batching {
@@ -98,7 +86,7 @@ export interface Attributes {
 
 
 export interface SubscriptionCallOptions {
-  flowControl?: FlowControl;
+  flowControl?: FlowControlOptions;
   maxConnections?: number;
   topic?: Topic;
   ackDeadline?: number;
@@ -194,7 +182,7 @@ export type CreateSubscriptionResponse =
 
 
 export interface CreateSubscriptionOptions {
-  flowControl?: {maxBytes?: number; maxMessages?: number;};
+  flowControl?: FlowControlOptions;
   gaxOpts?: CallOptions;
   /**
    * Duration in seconds.
@@ -435,7 +423,7 @@ export class PubSub {
       name: subscription.name,
     });
 
-    this.request(
+    this.request<google.pubsub.v1.Subscription>(
         {
           client: 'SubscriberClient',
           method: 'createSubscription',
