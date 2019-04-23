@@ -19,7 +19,7 @@ import is from '@sindresorhus/is';
 import {EventEmitter} from 'events';
 import * as extend from 'extend';
 import {CallOptions} from 'google-gax';
-import * as snakeCase from 'lodash.snakecase';
+import snakeCase = require('lodash.snakecase');
 
 import {google} from '../proto/pubsub';
 
@@ -79,7 +79,7 @@ export type SetSubscriptionMetadataResponse = MetadataResponse;
  * policy.
  * @property {string} ttl Specifies the "time-to-live" duration for an associated
  * resource. The resource expires if it is not active for a period of ttl. The
- * eeedefinition of "activity" depends on the type of the associated resource.
+ * definition of "activity" depends on the type of the associated resource.
  * The minimum and maximum allowed values for ttl depend on the type of the
  * associated resource, as well. If ttl is not set, the associated resource
  * never expires. A duration in seconds with up to nine fractional digits,
